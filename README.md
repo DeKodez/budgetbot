@@ -141,7 +141,7 @@ wrangler deploy
 ```
 You’ll get a public URL like:
 
-https://budgetbot.<your-account>.workers.dev
+https://budgetbot.your-account.workers.dev
 
 ---
 
