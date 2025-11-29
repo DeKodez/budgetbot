@@ -2,6 +2,7 @@ export interface Env {
 	DB: D1Database;
 	TELEGRAM_BOT_TOKEN: string;
 	TELEGRAM_WEBHOOK_SECRET: string;
+	TELEGRAM_HEADER_SECRET: string;
 	ALLOWED_USER_IDS: string; // comma-separated numeric IDs
   }
   
@@ -700,6 +701,10 @@ export interface Env {
 		request.method === "POST" &&
 		url.pathname === `/telegram-webhook/${env.TELEGRAM_WEBHOOK_SECRET}`
 	  ) {
+		const headerToken = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
+		if (headerToken !== env.TELEGRAM_HEADER_SECRET) {
+		return new Response("Unauthorized", { status: 401 });
+		}
 		const update = await request.json();
 		await handleTelegramUpdate(env, update);
 		return jsonResponse({ ok: true });
