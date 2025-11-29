@@ -19,7 +19,7 @@ export interface Env {
 	{ type: "daily" | "monthly" | "other" }
   > = {
 	// Daily bucket categories (meals/drinks)
-	Food: { type: "daily" },
+	Meals: { type: "daily" },
 	Drinks: { type: "daily" },
 
 	// Monthly budget categories
