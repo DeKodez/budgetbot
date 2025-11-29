@@ -1,3 +1,8 @@
+<p align="center">
+  <img width="512" height="512" alt="image" src="https://github.com/user-attachments/assets/9c89c324-a5d6-44c9-ba1f-74131cf85c13" />
+</p>
+
+
 # 💸 BudgetBot – Telegram Expense Tracker (Cloudflare Workers + D1)
 
 BudgetBot is a lightweight Telegram bot for tracking shared expenses between two users. It runs fully serverless on Cloudflare Workers with Cloudflare D1 as the database.
