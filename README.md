@@ -141,7 +141,7 @@ wrangler deploy
 ```
 You’ll get a public URL like:
 
-https://budgetbot.&lt;your-account&gt;.workers.dev
+https://budgetbot.<your-account>.workers.dev
 
 ---
 
@@ -150,7 +150,7 @@ https://budgetbot.&lt;your-account&gt;.workers.dev
 export TELEGRAM_BOT_TOKEN=YOUR_REAL_TOKEN
 
 curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -d "url=https://budgetbot.&lt;your-account&gt;.workers.dev/telegram-webhook/YOUR_SECRET"
+  -d "url=https://budgetbot.<your-account>.workers.dev/telegram-webhook/YOUR_SECRET"
 ```
 Verify:
 ```
