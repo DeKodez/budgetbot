@@ -469,20 +469,12 @@ export interface Env {
   }
   
   async function handleToday(env: Env, chatId: number) {
-	const now = nowSgLocal();
-	const sgDate = now.tsSgDate;
-	const budget = dailyBudgetForSgDateString(sgDate);
-	const { total: spent, byCategory } = await sumForDate(
-	  env,
-	  sgDate,
-	  DAILY_CATEGORIES
-	);
-	const remaining = budget - spent;
-  
+	const data = await getDailySummaryData(env, null);
+
 	const breakdownLines: string[] = [];
 	for (const cat of DAILY_CATEGORIES) {
-	  if (byCategory[cat] !== undefined) {
-		breakdownLines.push(`- ${cat}: ${byCategory[cat].toFixed(2)}`);
+	  if (data.by_category[cat] !== undefined) {
+		breakdownLines.push(`- ${cat}: ${data.by_category[cat].toFixed(2)}`);
 	  }
 	}
 	const breakdownText =
@@ -490,11 +482,11 @@ export interface Env {
   
 	const msg = [
 	  "*Today's Daily Budget (SG time)*",
-	  `Date: \`${sgDate}\``,
+	  `Date: \`${data.date}\``,
 	  "",
-	  `Budget: ${budget.toFixed(2)}`,
-	  `Spent (daily categories): ${spent.toFixed(2)}`,
-	  `Remaining: ${remaining.toFixed(2)}`,
+	  `Budget: ${data.budget_daily.toFixed(2)}`,
+	  `Spent (daily categories): ${data.spent_daily.toFixed(2)}`,
+	  `Remaining: ${data.remaining_daily.toFixed(2)}`,
 	  "",
 	  "*Breakdown (daily categories):*",
 	  breakdownText,
@@ -503,50 +495,17 @@ export interface Env {
 	await sendMessage(env, chatId, msg);
   }
   
+  
   async function handleMonth(env: Env, chatId: number) {
-	const now = nowSgLocal();
-	await sendMonthSummary(env, chatId, now.year, now.month);
-  }
+	const summary = await getMonthlySummaryData(env, null, null);
   
-  async function sendMonthSummary(
-	env: Env,
-	chatId: number,
-	year: number,
-	month: number
-  ) {
-	const sgMonth = `${year}-${String(month).padStart(2, "0")}`;
-  
-	const monthlyDaily = monthlyDailyBucketBudget(year, month);
-	const { total: spentDaily } = await sumForMonth(
-	  env,
-	  sgMonth,
-	  DAILY_CATEGORIES
-	);
-	const { total: spentMonthly, byCategory: byCatMonthly } = await sumForMonth(
-	  env,
-	  sgMonth,
-	  MONTHLY_CATEGORIES
-	);
-	const { total: spentOther } = await sumForMonth(
-	  env,
-	  sgMonth,
-	  OTHER_CATEGORIES
-	);
-  
-	const fixedBudgetTotal = Object.values(MONTHLY_CATEGORY_BUDGETS).reduce(
-	  (a, b) => a + b,
-	  0
-	);
-	const totalBudgetTracked = monthlyDaily + fixedBudgetTotal;
-	const totalSpentTracked = spentDaily + spentMonthly;
-	const remainingTracked = totalBudgetTracked - totalSpentTracked;
-  
-	const { weekdays, weekends } = countWeekdaysWeekends(year, month);
+	const { year, month } = summary;
+	const { weekdays, weekends } = summary;
   
 	const linesMonthly: string[] = [];
 	for (const cat of MONTHLY_CATEGORIES) {
-	  const amt = byCatMonthly[cat] ?? 0;
-	  const budget = MONTHLY_CATEGORY_BUDGETS[cat] ?? 0;
+	  const amt = summary.spent_monthly_by_category[cat] ?? 0;
+	  const budget = summary.fixed_monthly_budgets[cat] ?? 0;
 	  if (budget > 0) {
 		linesMonthly.push(`- ${cat}: ${amt.toFixed(2)} / ${budget.toFixed(2)}`);
 	  } else {
@@ -563,29 +522,36 @@ export interface Env {
 	  `Period: \`${year}-${String(month).padStart(2, "0")}\``,
 	  "",
 	  "*Daily bucket:*",
-	  `- Weekdays: ${weekdays} × ${WEEKDAY_DAILY_BUDGET.toFixed(2)}`,
-	  `- Weekends: ${weekends} × ${WEEKEND_DAILY_BUDGET.toFixed(2)}`,
-	  `  → Monthly daily budget: ${monthlyDaily.toFixed(2)}`,
-	  `  → Spent (daily categories): ${spentDaily.toFixed(2)}`,
+	  `- Weekdays: ${weekdays} x ${summary.weekday_daily_budget.toFixed(2)}`,
+	  `- Weekends: ${weekends} x ${summary.weekend_daily_budget.toFixed(2)}`,
+	  `  → Monthly daily budget: ${summary.monthly_daily_budget.toFixed(2)}`,
+	  `  → Spent (daily categories): ${summary.spent_daily.toFixed(2)}`,
 	  "",
 	  "*Fixed monthly categories:*",
-	  `- Total fixed monthly budget: ${fixedBudgetTotal.toFixed(2)}`,
-	  `- Spent (fixed monthly categories): ${spentMonthly.toFixed(2)}`,
+	  `- Total fixed monthly budget: ${Object.values(
+		summary.fixed_monthly_budgets
+	  )
+		.reduce((a, b) => a + b, 0)
+		.toFixed(2)}`,
+	  `- Spent (fixed monthly categories): ${summary.spent_monthly.toFixed(2)}`,
 	  breakdownMonthly,
 	  "",
 	  "*Other (uncapped):*",
-	  `- Spent in Other-type categories: ${spentOther.toFixed(2)}`,
+	  `- Spent in Other-type categories: ${summary.spent_other.toFixed(2)}`,
 	  "",
 	  "*Overall (tracked vs capped budget):*",
-	  `- Total budget (daily + fixed monthly): ${totalBudgetTracked.toFixed(
+	  `- Total budget (daily + fixed monthly): ${summary.total_budget_tracked.toFixed(
 		2
 	  )}`,
-	  `- Total spent (daily + fixed monthly): ${totalSpentTracked.toFixed(2)}`,
-	  `- Remaining (tracked budget): ${remainingTracked.toFixed(2)}`,
+	  `- Total spent (daily + fixed monthly): ${summary.total_spent_tracked.toFixed(
+		2
+	  )}`,
+	  `- Remaining (tracked budget): ${summary.remaining_tracked.toFixed(2)}`,
 	].join("\n");
   
 	await sendMessage(env, chatId, msg);
   }
+  
   
   // ---------- HTTP API handlers ----------
   
@@ -595,18 +561,51 @@ export interface Env {
 	  headers: { "Content-Type": "application/json" },
 	});
   }
+
   
-  // GET /api/summary/daily?date=YYYY-MM-DD
-  async function apiDailySummary(env: Env, url: URL): Promise<Response> {
-	const dateStr = url.searchParams.get("date");
+  type DailySummaryData = {
+	date: string;
+	timezone: string;
+	budget_daily: number;
+	spent_daily: number;
+	remaining_daily: number;
+	by_category: Record<string, number>;
+  };
+  
+  type MonthlySummaryData = {
+	year: number;
+	month: number;
+	timezone: string;
+	weekdays: number;
+	weekends: number;
+	weekday_daily_budget: number;
+	weekend_daily_budget: number;
+	monthly_daily_budget: number;
+	fixed_monthly_budgets: Record<string, number>;
+	spent_daily: number;
+	spent_daily_by_category: Record<string, number>;
+	spent_monthly: number;
+	spent_monthly_by_category: Record<string, number>;
+	spent_other: number;
+	spent_other_by_category: Record<string, number>;
+	total_budget_tracked: number;
+	total_spent_tracked: number;
+	remaining_tracked: number;
+  };
+  
+  /**
+   * Core logic for daily summary.
+   * If `dateStr` is null/undefined, uses "today" in SG time.
+   */
+  async function getDailySummaryData(
+	env: Env,
+	dateStr?: string | null
+  ): Promise<DailySummaryData> {
 	let sgDate: string;
 	if (dateStr) {
 	  const norm = normalizeSgDateString(dateStr);
 	  if (!norm) {
-		return jsonResponse(
-		  { error: "Invalid date format, use YYYY-MM-DD" },
-		  400
-		);
+		throw new Error("Invalid date format, use YYYY-MM-DD");
 	  }
 	  sgDate = norm;
 	} else {
@@ -621,27 +620,36 @@ export interface Env {
 	);
 	const remaining = budget - spent;
   
-	return jsonResponse({
+	return {
 	  date: sgDate,
 	  timezone: SG_TIMEZONE,
 	  budget_daily: budget,
 	  spent_daily: spent,
 	  remaining_daily: remaining,
 	  by_category: byCategory,
-	});
+	};
   }
   
-  // GET /api/summary/monthly?year=YYYY&month=MM
-  async function apiMonthlySummary(env: Env, url: URL): Promise<Response> {
+  /**
+   * Core logic for monthly summary.
+   * If `year`/`month` are null/undefined, uses current SG year/month.
+   */
+  async function getMonthlySummaryData(
+	env: Env,
+	year?: number | null,
+	month?: number | null
+  ): Promise<MonthlySummaryData> {
 	const now = nowSgLocal();
-	const year = Number(url.searchParams.get("year") ?? now.year);
-	const month = Number(url.searchParams.get("month") ?? now.month);
-	if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
-	  return jsonResponse({ error: "Invalid year or month" }, 400);
-	}
-	const sgMonth = `${year}-${String(month).padStart(2, "0")}`;
+	const y = year ?? now.year;
+	const m = month ?? now.month;
   
-	const monthlyDaily = monthlyDailyBucketBudget(year, month);
+	if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+	  throw new Error("Invalid year or month");
+	}
+  
+	const sgMonth = `${y}-${String(m).padStart(2, "0")}`;
+  
+	const monthlyDaily = monthlyDailyBucketBudget(y, m);
 	const { total: spentDaily, byCategory: byCatDaily } = await sumForMonth(
 	  env,
 	  sgMonth,
@@ -666,11 +674,11 @@ export interface Env {
 	const totalSpentTracked = spentDaily + spentMonthly;
 	const remainingTracked = totalBudgetTracked - totalSpentTracked;
   
-	const { weekdays, weekends } = countWeekdaysWeekends(year, month);
+	const { weekdays, weekends } = countWeekdaysWeekends(y, m);
   
-	return jsonResponse({
-	  year,
-	  month,
+	return {
+	  year: y,
+	  month: m,
 	  timezone: SG_TIMEZONE,
 	  weekdays,
 	  weekends,
@@ -687,8 +695,9 @@ export interface Env {
 	  total_budget_tracked: totalBudgetTracked,
 	  total_spent_tracked: totalSpentTracked,
 	  remaining_tracked: remainingTracked,
-	});
+	};
   }
+  
   
   // ---------- Worker entrypoint ----------
   
@@ -709,15 +718,7 @@ export interface Env {
 		await handleTelegramUpdate(env, update);
 		return jsonResponse({ ok: true });
 	  }
-  
-	  // HTTP APIs
-	  if (request.method === "GET" && url.pathname === "/api/summary/daily") {
-		return apiDailySummary(env, url);
-	  }
-	  if (request.method === "GET" && url.pathname === "/api/summary/monthly") {
-		return apiMonthlySummary(env, url);
-	  }
-  
+	  // Health Check
 	  if (request.method === "GET" && url.pathname === "/healthz") {
 		return jsonResponse({ status: "ok" });
 	  }
