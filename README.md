@@ -21,11 +21,11 @@ It supports:
 ---
 
 ## Architecture
-
+```
 Telegram ──HTTPS──▶ Cloudflare Worker (TypeScript)
                          │
-                         └── Cloudflare D1 (SQLite-like DB)
-
+                         └──▶ Cloudflare D1 (SQLite-like DB)
+```
 No servers to manage, no containers, no background processes.
 
 ---
