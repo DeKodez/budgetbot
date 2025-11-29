@@ -115,9 +115,10 @@ wrangler d1 execute DB --remote --file=./migrations/0001_init.sql
 
 ### 5. Set secrets
 ```
-wrangler secret put TELEGRAM_BOT_TOKEN  
-wrangler secret put TELEGRAM_WEBHOOK_SECRET  
-wrangler secret put ALLOWED_USER_IDS  
+wrangler secret put TELEGRAM_BOT_TOKEN
+wrangler secret put TELEGRAM_WEBHOOK_SECRET
+wrangler secret put TELEGRAM_HEADER_SECRET
+wrangler secret put ALLOWED_USER_IDS
 ```
 ALLOWED_USER_IDS should be:
 ```
@@ -150,7 +151,8 @@ https://budgetbot.your-account.workers.dev
 export TELEGRAM_BOT_TOKEN=YOUR_REAL_TOKEN
 
 curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -d "url=https://budgetbot.<your-account>.workers.dev/telegram-webhook/YOUR_SECRET"
+  -d "url=https://budgetbot.<your-account>.workers.dev/telegram-webhook/YOUR_SECRET" \
+  -d "secret_token=YOUR_HEADER_SECRET"
 ```
 Verify:
 ```
@@ -192,10 +194,11 @@ const MONTHLY_CATEGORY_BUDGETS = {
 
 ## Security Notes
 
-- All secrets are stored using wrangler secret.
-- Only whitelisted Telegram users can interact with the bot.
-- Webhook endpoint is protected by a secret URL path.
-
+- All secrets are stored securely using `wrangler secret` and are never committed to the repository.
+- Only explicitly whitelisted Telegram user IDs can interact with the bot.
+- The webhook endpoint is protected by a private secret URL path and Telegram header verification.
+- No public read or write HTTP APIs are exposed; all data access happens internally via the Telegram bot.
+- All database access is parameterized to prevent SQL injection.
 ---
 
 ## Example API Responses
