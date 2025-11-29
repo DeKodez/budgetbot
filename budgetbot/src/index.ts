@@ -438,7 +438,7 @@ export interface Env {
 	await sendMessage(
 	  env,
 	  chatId,
-	  "Use /add to record an expense, /today for today's summary, or /month for this month's summary."
+	  "Use /add to record an expense 💸, /today for today's summary 📅, or /month for this month's summary 🗓️."
 	);
   }
   
@@ -449,15 +449,15 @@ export interface Env {
 	  env,
 	  chatId,
 	  [
-		"Hi! I'm your expense tracker bot.",
+		"Hi! I'm your very own budgetbot. 🤖",
 		"",
 		"*Commands:*",
-		"• /add – Add a new expense",
-		"• /today – See today's spending vs daily budget",
-		"• /month – See this month's spending vs budget",
+		"• /add - Add a new expense 💸",
+		"• /today - See today's spending vs daily budget 📅",
+		"• /month - See this month's spending vs budget 🗓️",
 		"",
 		"Daily budgets use *Singapore time* and have different limits",
-		"for weekdays and weekends. The *Other* category has no budget cap.",
+		"for weekdays and weekends. The *Other* category has no budget cap. ",
 	  ].join("\n"),
 	  buildCategoryKeyboard()
 	);
@@ -480,17 +480,20 @@ export interface Env {
 	const breakdownText =
 	  breakdownLines.length > 0 ? breakdownLines.join("\n") : "_No daily spending yet._";
   
-	const msg = [
-	  "*Today's Daily Budget (SG time)*",
-	  `Date: \`${data.date}\``,
-	  "",
-	  `Budget: ${data.budget_daily.toFixed(2)}`,
-	  `Spent (daily categories): ${data.spent_daily.toFixed(2)}`,
-	  `Remaining: ${data.remaining_daily.toFixed(2)}`,
-	  "",
-	  "*Breakdown (daily categories):*",
-	  breakdownText,
-	].join("\n");
+	  const msg = [
+		"📅 *Today's Daily Budget (SG Time)*",
+		`🗓️ *Date:* \`${data.date}\``,
+	  
+		"",
+		"💵 *Daily Summary*",
+		`• Budget: ${data.budget_daily.toFixed(2)}`,
+		`• Spent: ${data.spent_daily.toFixed(2)}`,
+		`• *Remaining:* ${data.remaining_daily.toFixed(2)}`,
+	  
+		"",
+		"🧾 *Breakdown (Daily Categories)*",
+		breakdownText,
+	  ].join("\n");
   
 	await sendMessage(env, chatId, msg);
   }
@@ -507,50 +510,51 @@ export interface Env {
 	  const amt = summary.spent_monthly_by_category[cat] ?? 0;
 	  const budget = summary.fixed_monthly_budgets[cat] ?? 0;
 	  if (budget > 0) {
-		linesMonthly.push(`- ${cat}: ${amt.toFixed(2)} / ${budget.toFixed(2)}`);
+		linesMonthly.push(`• ${cat}: ${amt.toFixed(2)} / ${budget.toFixed(2)}`);
 	  } else {
-		linesMonthly.push(`- ${cat}: ${amt.toFixed(2)}`);
+		linesMonthly.push(`• ${cat}: ${amt.toFixed(2)}`);
 	  }
 	}
 	const breakdownMonthly =
 	  linesMonthly.length > 0
 		? linesMonthly.join("\n")
-		: "_No fixed-monthly-category spending yet._";
+		: "_No fixed monthly spending yet._";
   
 	const msg = [
-	  "*Monthly Summary (SG time)*",
-	  `Period: \`${year}-${String(month).padStart(2, "0")}\``,
+	  "📊 *Monthly Summary (SG Time)*",
+	  `🗓️ *Period:* \`${year}-${String(month).padStart(2, "0")}\``,
+  
 	  "",
-	  "*Daily bucket:*",
-	  `- Weekdays: ${weekdays} x ${summary.weekday_daily_budget.toFixed(2)}`,
-	  `- Weekends: ${weekends} x ${summary.weekend_daily_budget.toFixed(2)}`,
-	  `  → Monthly daily budget: ${summary.monthly_daily_budget.toFixed(2)}`,
-	  `  → Spent (daily categories): ${summary.spent_daily.toFixed(2)}`,
+	  "🍽️ *Daily Spending Bucket*",
+	  `• Weekdays: ${weekdays} x ${summary.weekday_daily_budget.toFixed(2)}`,
+	  `• Weekends: ${weekends} x ${summary.weekend_daily_budget.toFixed(2)}`,
+	  `→ *Monthly daily budget:* ${summary.monthly_daily_budget.toFixed(2)}`,
+	  `→ *Spent (daily categories):* ${summary.spent_daily.toFixed(2)}`,
+  
 	  "",
-	  "*Fixed monthly categories:*",
-	  `- Total fixed monthly budget: ${Object.values(
+	  "📦 *Monthly Categories*",
+	  `→ *Total budget:* ${Object.values(
 		summary.fixed_monthly_budgets
 	  )
 		.reduce((a, b) => a + b, 0)
 		.toFixed(2)}`,
-	  `- Spent (fixed monthly categories): ${summary.spent_monthly.toFixed(2)}`,
+	  `→ *Spent (mothly categories):* ${summary.spent_monthly.toFixed(2)}`,
 	  breakdownMonthly,
+  
 	  "",
-	  "*Other (uncapped):*",
-	  `- Spent in Other-type categories: ${summary.spent_other.toFixed(2)}`,
+	  "🎁 *Other (Uncapped)*",
+	  `→ Spent in Other categories: ${summary.spent_other.toFixed(2)}`,
+  
 	  "",
-	  "*Overall (tracked vs capped budget):*",
-	  `- Total budget (daily + fixed monthly): ${summary.total_budget_tracked.toFixed(
-		2
-	  )}`,
-	  `- Total spent (daily + fixed monthly): ${summary.total_spent_tracked.toFixed(
-		2
-	  )}`,
-	  `- Remaining (tracked budget): ${summary.remaining_tracked.toFixed(2)}`,
+	  "✅ *Overall (Tracked vs Capped Budget)*",
+	  `• Total budget: ${summary.total_budget_tracked.toFixed(2)}`,
+	  `• Total spent: ${summary.total_spent_tracked.toFixed(2)}`,
+	  `• *Remaining:* ${summary.remaining_tracked.toFixed(2)}`,
 	].join("\n");
   
 	await sendMessage(env, chatId, msg);
   }
+  
   
   
   // ---------- HTTP API handlers ----------
